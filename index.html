@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ATLAS">
+<meta name="theme-color" content="#08080f">
+<link rel="manifest" href="manifest.json">
+<title>ATLAS — Dünya İnşa Haritası</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════
+   ATLAS v2 — Design System
+   Aesthetic: Obsidian Codex · Deep void blacks · Neon rune glows
+   ═══════════════════════════════════════════════════════ */
+:root{
+  --v0:#06060c; --v1:#09090f; --v2:#0e0e1a; --v3:#141425;
+  --v4:#1a1a2e; --v5:#212138; --v6:#282848;
+  --rim0:rgba(180,170,255,.04); --rim1:rgba(180,170,255,.09);
+  --rim2:rgba(180,170,255,.16); --rim3:rgba(180,170,255,.28);
+  --t0:#f0edff; --t1:rgba(240,237,255,.62); --t2:rgba(240,237,255,.32); --t3:rgba(240,237,255,.15);
+  --gold:#d4a843; --gold-g:rgba(212,168,67,.14); --gold-h:rgba(212,168,67,.5);
+  --neon:#7b68ee; --neon-g:rgba(123,104,238,.14);
+  --red:#d4596a; --red-g:rgba(212,89,106,.14);
+  --grn:#4ecb8d; --grn-g:rgba(78,203,141,.12);
+  --cyn:#4ecbcb; --cyn-g:rgba(78,203,203,.12);
+  --org:#d47a43; --org-g:rgba(212,122,67,.14);
+  --blu:#5b8dd9;
+  --r1:8px; --r2:13px; --r3:20px; --r4:28px;
+  --ease:cubic-bezier(.16,1,.3,1); --spring:cubic-bezier(.34,1.56,.64,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--v0);color:var(--t0);
+  font-family:'Crimson Pro',Georgia,serif;-webkit-font-smoothing:antialiased;}
+
+/* ── STARFIELD ─────────────────────────────────────── */
+#stars{position:fixed;inset:0;z-index:0;pointer-events:none;}
+
+/* ── MAP ───────────────────────────────────────────── */
+#map{width:100%;height:100%;background:var(--v0);}
+.leaflet-container{background:var(--v0)!important;}
+.leaflet-control-zoom,.leaflet-control-attribution{display:none!important;}
+#map.add-mode{cursor:crosshair;}
+
+/* ── UPLOAD SCREEN ─────────────────────────────────── */
+#upload-screen{
+  position:fixed;inset:0;z-index:1000;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:36px;padding:48px 28px;
+}
+.logo{display:flex;flex-direction:column;align-items:center;gap:14px;}
+.logo-ring{
+  width:80px;height:80px;border-radius:50%;
+  border:1.5px solid var(--gold);
+  display:flex;align-items:center;justify-content:center;font-size:34px;
+  box-shadow:0 0 50px var(--gold-g),inset 0 0 24px var(--gold-g);
+  animation:aura 3s ease-in-out infinite;
+}
+@keyframes aura{0%,100%{box-shadow:0 0 50px var(--gold-g),inset 0 0 24px var(--gold-g);}
+  50%{box-shadow:0 0 80px rgba(212,168,67,.28),inset 0 0 40px rgba(212,168,67,.1);}}
+.logo h1{font-family:'Cinzel',serif;font-size:34px;font-weight:700;letter-spacing:.26em;color:var(--gold);}
+.logo p{font-size:14px;color:var(--t2);letter-spacing:.1em;}
+#upload-btn{
+  display:flex;flex-direction:column;align-items:center;gap:13px;
+  background:linear-gradient(145deg,var(--v3),var(--v2));
+  border:1.5px dashed var(--rim2);border-radius:var(--r4);
+  padding:42px 56px;cursor:pointer;width:100%;max-width:300px;
+  transition:.3s var(--ease);position:relative;overflow:hidden;
+}
+#upload-btn::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 0%,rgba(212,168,67,.05),transparent 70%);pointer-events:none;}
+#upload-btn:active{border-color:var(--gold);background:var(--v4);box-shadow:0 0 36px var(--gold-g);}
+#upload-btn .uico{font-size:44px;filter:drop-shadow(0 4px 12px rgba(212,168,67,.4));}
+#upload-btn .utit{font-family:'Cinzel',serif;font-size:16px;font-weight:600;color:var(--t0);letter-spacing:.06em;}
+#upload-btn .usub{font-size:12px;color:var(--t2);}
+#map-file-input{display:none;}
+
+/* ── TOP BAR ───────────────────────────────────────── */
+#top-bar{
+  position:fixed;top:0;left:0;right:0;z-index:500;
+  display:none;align-items:center;gap:6px;
+  padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top,10px));
+  background:linear-gradient(to bottom,rgba(6,6,12,.97) 55%,transparent);
+  border-bottom:1px solid transparent;
+}
+.brand{font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:var(--gold);
+  letter-spacing:.22em;text-shadow:0 0 20px var(--gold-g);flex-shrink:0;}
+.tb-sep{flex:1;}
+.tb-btn{
+  width:38px;height:38px;border-radius:var(--r2);
+  background:rgba(9,9,15,.88);border:1px solid var(--rim1);
+  color:var(--t1);font-size:17px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;backdrop-filter:blur(14px);transition:.2s ease;flex-shrink:0;
+}
+.tb-btn:active,.tb-btn.lit{background:var(--v5);color:var(--gold);border-color:var(--rim2);}
+
+/* ── SEARCH PANEL ──────────────────────────────────── */
+#search-panel{
+  position:fixed;z-index:490;
+  top:max(58px,calc(env(safe-area-inset-top,0px)+58px));
+  left:0;right:0;
+  background:rgba(6,6,12,.98);backdrop-filter:blur(22px);
+  border-bottom:1px solid var(--rim1);padding:10px 14px 12px;
+  transform:translateY(-110%);opacity:0;transition:.32s var(--ease);
+}
+#search-panel.on{transform:translateY(0);opacity:1;}
+.search-wrap{position:relative;}
+.s-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--t2);pointer-events:none;}
+#search-input{
+  width:100%;background:var(--v3);border:1.5px solid var(--rim1);
+  border-radius:var(--r3);color:var(--t0);
+  font-family:'Crimson Pro',serif;font-size:17px;
+  padding:12px 14px 12px 40px;outline:none;-webkit-appearance:none;
+  transition:.2s ease;
+}
+#search-input:focus{border-color:var(--gold-h);background:var(--v2);}
+#search-input::placeholder{color:var(--t2);}
+#search-res{max-height:52vh;overflow-y:auto;margin-top:8px;display:flex;flex-direction:column;gap:4px;}
+.sr-row{
+  display:flex;align-items:center;gap:11px;
+  background:var(--v3);border:1px solid var(--rim0);
+  border-radius:var(--r2);padding:11px 13px;cursor:pointer;transition:.18s ease;
+}
+.sr-row:active{background:var(--v4);}
+.sr-em{font-size:20px;flex-shrink:0;}
+.sr-txt{flex:1;overflow:hidden;}
+.sr-tit{font-size:16px;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sr-snip{font-size:12px;color:var(--t2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sr-none{text-align:center;color:var(--t2);font-size:15px;padding:18px;}
+
+/* ── FILTER PANEL ──────────────────────────────────── */
+#filter-panel{
+  position:fixed;z-index:489;
+  top:max(58px,calc(env(safe-area-inset-top,0px)+58px));
+  left:0;right:0;
+  background:rgba(6,6,12,.97);backdrop-filter:blur(22px);
+  border-bottom:1px solid var(--rim1);padding:10px 14px 14px;
+  transform:translateY(-110%);opacity:0;transition:.32s var(--ease);
+}
+#filter-panel.on{transform:translateY(0);opacity:1;}
+.fp-lbl{font-family:'Cinzel',serif;font-size:10px;letter-spacing:.15em;color:var(--t2);
+  text-transform:uppercase;margin-bottom:9px;}
+.fp-row{display:flex;flex-wrap:wrap;gap:6px;}
+.fchip{
+  display:inline-flex;align-items:center;gap:5px;padding:7px 12px;
+  border-radius:20px;cursor:pointer;border:1.5px solid transparent;
+  font-size:13px;background:var(--v3);transition:.18s ease;white-space:nowrap;
+  color:var(--t2);
+}
+.fchip.on{color:#000;font-weight:600;}
+.fchip:active{opacity:.8;}
+
+/* ── FAB ───────────────────────────────────────────── */
+#fab{
+  position:fixed;right:20px;
+  bottom:max(32px,calc(env(safe-area-inset-bottom,0px)+18px));
+  width:60px;height:60px;border-radius:50%;
+  background:var(--gold);color:#000;font-size:24px;
+  display:none;align-items:center;justify-content:center;
+  border:none;cursor:pointer;z-index:500;
+  box-shadow:0 6px 26px rgba(212,168,67,.5),0 2px 6px rgba(0,0,0,.5);
+  transition:.38s var(--spring);
+}
+#fab.active{background:var(--red);box-shadow:0 6px 26px rgba(212,89,106,.5),0 2px 6px rgba(0,0,0,.5);}
+#fab:active{transform:scale(.9);}
+
+/* ── ADD HINT ──────────────────────────────────────── */
+#add-hint{
+  position:fixed;
+  top:max(68px,calc(env(safe-area-inset-top,0px)+62px));
+  left:50%;transform:translateX(-50%) translateY(-8px);
+  background:rgba(212,89,106,.1);border:1px solid rgba(212,89,106,.38);
+  border-radius:var(--r3);padding:10px 20px;font-size:13px;color:#e08090;
+  z-index:500;opacity:0;pointer-events:none;white-space:nowrap;
+  transition:.3s var(--ease);
+}
+#add-hint.on{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── PIN COUNT ─────────────────────────────────────── */
+#pin-count{
+  position:fixed;left:16px;
+  bottom:max(38px,calc(env(safe-area-inset-bottom,0px)+24px));
+  display:none;align-items:center;gap:6px;
+  background:rgba(9,9,15,.88);border:1px solid var(--rim2);
+  border-radius:var(--r2);padding:8px 13px;
+  font-family:'Cinzel',serif;font-size:11px;color:var(--t2);
+  letter-spacing:.09em;backdrop-filter:blur(14px);z-index:500;
+}
+.pc-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold);}
+
+/* ── BACKDROP ──────────────────────────────────────── */
+#backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:750;
+  opacity:0;pointer-events:none;transition:opacity .32s ease;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+}
+#backdrop.on{opacity:1;pointer-events:all;}
+
+/* ── RIGHT DRAWER ──────────────────────────────────── */
+#drawer{
+  position:fixed;top:0;right:0;bottom:0;width:88%;max-width:340px;
+  background:var(--v1);border-left:1px solid var(--rim1);z-index:900;
+  transform:translateX(105%);transition:.42s var(--ease);
+  display:flex;flex-direction:column;
+  padding-top:max(16px,env(safe-area-inset-top,16px));
+  padding-bottom:max(20px,env(safe-area-inset-bottom,20px));
+}
+#drawer.on{transform:translateX(0);}
+.dr-head{display:flex;align-items:center;justify-content:space-between;padding:10px 18px 16px;flex-shrink:0;}
+.dr-brand{font-family:'Cinzel',serif;font-size:17px;font-weight:700;color:var(--gold);letter-spacing:.15em;}
+.dr-x{width:34px;height:34px;border-radius:50%;background:var(--v3);border:1px solid var(--rim1);
+  color:var(--t1);font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.dr-x:active{background:var(--v4);}
+.dr-body{flex:1;overflow-y:auto;padding:0 16px;display:flex;flex-direction:column;gap:22px;}
+.dr-body::-webkit-scrollbar{width:3px;}
+.dr-body::-webkit-scrollbar-thumb{background:var(--rim2);border-radius:2px;}
+.dr-sec-hd{
+  display:flex;align-items:center;justify-content:space-between;
+  font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;
+  color:var(--t2);text-transform:uppercase;margin-bottom:10px;
+}
+.dr-sec-hd button{
+  background:var(--v3);border:1px solid var(--rim1);color:var(--gold);
+  border-radius:var(--r1);padding:5px 11px;font-family:'Cinzel',serif;
+  font-size:11px;cursor:pointer;letter-spacing:.06em;
+}
+.dr-sec-hd button:active{background:var(--v4);}
+
+/* Map Cards */
+.map-cards{display:flex;flex-direction:column;gap:7px;}
+.mcard{
+  display:flex;align-items:center;gap:11px;
+  background:var(--v3);border:1.5px solid var(--rim0);
+  border-radius:var(--r2);padding:9px 11px;cursor:pointer;
+  transition:.2s ease;position:relative;
+}
+.mcard:active{background:var(--v4);}
+.mcard.cur{border-color:var(--gold-h);background:rgba(212,168,67,.05);}
+.mcard-thumb{width:50px;height:38px;border-radius:var(--r1);object-fit:cover;
+  background:var(--v4);flex-shrink:0;border:1px solid var(--rim1);}
+.mcard-ph{width:50px;height:38px;border-radius:var(--r1);background:var(--v4);
+  border:1px solid var(--rim1);display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;}
+.mcard-info{flex:1;overflow:hidden;}
+.mcard-name{font-size:15px;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mcard-meta{font-size:11px;color:var(--t2);margin-top:2px;}
+.mcard-del{padding:6px 8px;font-size:15px;color:var(--red);background:transparent;border:none;cursor:pointer;flex-shrink:0;}
+.mcard-del:active{opacity:.7;}
+.cur-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);
+  box-shadow:0 0 8px var(--gold);position:absolute;top:9px;right:36px;}
+
+/* Backup Buttons */
+.bk-btns{display:flex;flex-direction:column;gap:7px;}
+.bk-btn{
+  display:flex;align-items:center;gap:13px;
+  background:var(--v3);border:1.5px solid var(--rim1);
+  border-radius:var(--r2);padding:13px 15px;cursor:pointer;transition:.2s ease;width:100%;
+}
+.bk-btn:active{background:var(--v4);}
+.bki{font-size:22px;flex-shrink:0;}
+.bkt{flex:1;}
+.bkt span{display:block;font-size:15px;color:var(--t0);}
+.bkt small{font-size:11px;color:var(--t2);}
+
+/* ── BOTTOM SHEET ──────────────────────────────────── */
+#sheet{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--v2);
+  border-radius:var(--r4) var(--r4) 0 0;
+  border-top:1px solid var(--rim1);
+  box-shadow:0 -8px 80px rgba(0,0,0,.95);
+  z-index:800;transform:translateY(102%);
+  transition:transform .44s var(--ease);
+  max-height:94dvh;display:flex;flex-direction:column;
+  padding-bottom:max(16px,env(safe-area-inset-bottom,16px));
+}
+#sheet.on{transform:translateY(0);}
+.sh-handle{width:36px;height:4px;background:var(--rim2);border-radius:2px;margin:13px auto 0;flex-shrink:0;}
+.sh-head{display:flex;align-items:center;justify-content:space-between;padding:11px 18px 4px;flex-shrink:0;}
+.sh-lbl{font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;color:var(--t2);text-transform:uppercase;}
+.sh-x{width:32px;height:32px;border-radius:50%;background:var(--v3);border:1px solid var(--rim1);
+  color:var(--t1);font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.sh-x:active{background:var(--v4);}
+.sh-body{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 18px 20px;
+  display:flex;flex-direction:column;gap:15px;-webkit-overflow-scrolling:touch;}
+.sh-body::-webkit-scrollbar{width:3px;}
+.sh-body::-webkit-scrollbar-thumb{background:var(--rim2);border-radius:2px;}
+
+/* ── FORM FIELDS ───────────────────────────────────── */
+.fg{display:flex;flex-direction:column;gap:7px;}
+.fl{font-family:'Cinzel',serif;font-size:10px;letter-spacing:.13em;color:var(--t2);text-transform:uppercase;}
+.fi{
+  background:var(--v1);border:1.5px solid var(--rim1);
+  border-radius:var(--r2);color:var(--t0);
+  font-family:'Crimson Pro',serif;font-size:18px;
+  padding:13px 15px;width:100%;outline:none;
+  -webkit-appearance:none;appearance:none;transition:.2s ease;
+}
+.fi:focus{border-color:var(--gold-h);background:var(--v0);box-shadow:0 0 0 3px var(--gold-g);}
+.fi::placeholder{color:var(--t2);}
+
+/* Category chips in sheet */
+.cat-scroll{display:flex;gap:6px;overflow-x:auto;padding-bottom:3px;}
+.cat-scroll::-webkit-scrollbar{display:none;}
+.cchip{
+  display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+  padding:8px 13px;border-radius:20px;cursor:pointer;flex-shrink:0;
+  border:1.5px solid var(--rim1);background:var(--v1);
+  font-size:13px;color:var(--t1);transition:.18s ease;
+}
+.cchip.on{color:#000;font-weight:600;}
+.cchip:active{opacity:.8;}
+
+/* Color row */
+.clr-row{display:flex;align-items:center;gap:10px;}
+.clr-row label{font-size:14px;color:var(--t1);flex:1;}
+#pin-color{width:44px;height:32px;border:1.5px solid var(--rim2);border-radius:var(--r1);
+  background:var(--v1);cursor:pointer;padding:2px;}
+
+/* ── MARKDOWN EDITOR ───────────────────────────────── */
+.md-wrap{border:1.5px solid var(--rim1);border-radius:var(--r2);overflow:hidden;
+  transition:.2s ease;}
+.md-wrap:focus-within{border-color:var(--gold-h);box-shadow:0 0 0 3px var(--gold-g);}
+.md-bar{
+  display:flex;align-items:center;gap:2px;padding:6px 8px;
+  background:var(--v3);border-bottom:1px solid var(--rim0);
+}
+.md-btn{
+  width:32px;height:30px;border-radius:var(--r1);background:transparent;
+  border:none;color:var(--t1);font-size:14px;font-family:'Crimson Pro',serif;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s ease;
+}
+.md-btn:active,.md-btn.on{background:var(--v5);color:var(--gold);}
+.md-div{width:1px;height:20px;background:var(--rim1);margin:0 3px;}
+#p-notes{
+  background:var(--v1);border:none;border-radius:0;
+  color:var(--t0);font-family:'Crimson Pro',serif;font-size:16px;
+  padding:13px 15px;width:100%;outline:none;
+  min-height:130px;resize:none;line-height:1.68;-webkit-appearance:none;display:block;
+}
+#md-prev{
+  background:var(--v1);color:var(--t0);font-family:'Crimson Pro',serif;
+  font-size:16px;line-height:1.72;padding:13px 15px;min-height:130px;display:none;
+}
+#md-prev.on{display:block;}
+#md-prev h1,#md-prev h2,#md-prev h3{font-family:'Cinzel',serif;color:var(--gold);margin:10px 0 5px;}
+#md-prev h1{font-size:19px;}#md-prev h2{font-size:16px;}#md-prev h3{font-size:14px;}
+#md-prev strong{color:var(--t0);font-weight:700;}
+#md-prev em{color:var(--t1);font-style:italic;}
+#md-prev ul{padding-left:18px;margin:5px 0;}
+#md-prev li{margin:3px 0;}
+#md-prev p{margin:5px 0;}
+#md-prev hr{border:none;border-top:1px solid var(--rim1);margin:10px 0;}
+
+/* Image picker */
+.ipick input[type=file]{display:none;}
+.ipick-btn{
+  display:flex;align-items:center;gap:12px;
+  background:var(--v1);border:1.5px dashed var(--rim2);
+  border-radius:var(--r2);padding:12px 15px;cursor:pointer;
+  transition:.2s ease;width:100%;
+}
+.ipick-btn:active{background:var(--v3);border-color:var(--neon);}
+.ipick-ico{font-size:22px;}
+.ipick-txt span{display:block;font-size:15px;color:var(--t1);}
+.ipick-txt small{font-size:12px;color:var(--t2);}
+#pin-img-prev{width:100%;border-radius:var(--r2);max-height:185px;object-fit:cover;
+  border:1px solid var(--rim1);display:none;}
+#pin-img-prev.on{display:block;animation:fadeIn .3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:scale(.97);}to{opacity:1;transform:scale(1);}}
+
+/* Sheet actions */
+.sh-acts{display:flex;gap:8px;padding:0 18px 4px;flex-shrink:0;}
+.btn{flex:1;padding:15px;border-radius:var(--r2);border:none;
+  font-family:'Cinzel',serif;font-size:12px;font-weight:700;
+  letter-spacing:.1em;cursor:pointer;transition:.25s var(--spring);}
+.btn-save{background:var(--gold);color:#000;}
+.btn-save:active{transform:scale(.96);}
+.btn-del{background:var(--v3);color:var(--red);border:1px solid rgba(212,89,106,.24);
+  flex:0 0 auto;width:68px;font-size:18px;}
+.btn-del:active{transform:scale(.96);background:var(--red-g);}
+
+/* ── CUSTOM MARKERS ────────────────────────────────── */
+.mkr{position:relative;display:flex;flex-direction:column;align-items:center;width:32px;}
+.mkr-pin{
+  width:26px;height:26px;border-radius:50% 50% 50% 0;
+  transform:rotate(-45deg);border:2.5px solid rgba(255,255,255,.22);
+  display:flex;align-items:center;justify-content:center;
+  transition:.25s var(--spring);filter:drop-shadow(0 3px 8px rgba(0,0,0,.5));
+}
+.mkr-pin span{transform:rotate(45deg);font-size:12px;line-height:1;display:block;}
+.mkr.sel .mkr-pin{transform:rotate(-45deg) scale(1.32);border-color:rgba(255,255,255,.55);filter:drop-shadow(0 4px 12px rgba(0,0,0,.6)) brightness(1.25);}
+.mkr-tail{width:4px;height:4px;border-radius:50%;margin-top:2px;opacity:.6;}
+
+/* ── CONFIRM / PROMPT BOX ──────────────────────────── */
+#confirm-box{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--v2);border-radius:var(--r4) var(--r4) 0 0;
+  border-top:1px solid var(--rim1);
+  padding:24px 20px;padding-bottom:max(24px,env(safe-area-inset-bottom,24px));
+  z-index:920;transform:translateY(106%);transition:.42s var(--ease);box-shadow:0 -8px 60px rgba(0,0,0,.9);
+}
+#confirm-box.on{transform:translateY(0);}
+#confirm-ttl{font-family:'Cinzel',serif;font-size:17px;color:var(--t0);margin-bottom:9px;}
+#confirm-msg{font-size:15px;color:var(--t1);margin-bottom:16px;line-height:1.5;}
+#confirm-inp{
+  background:var(--v1);border:1.5px solid var(--rim1);
+  border-radius:var(--r2);color:var(--t0);font-family:'Crimson Pro',serif;font-size:18px;
+  padding:13px 15px;width:100%;outline:none;-webkit-appearance:none;
+  margin-bottom:14px;display:none;
+}
+#confirm-inp:focus{border-color:var(--gold-h);}
+.cfm-btns{display:flex;gap:10px;}
+.cfm-btns button{flex:1;padding:14px;border-radius:var(--r2);border:none;
+  font-family:'Cinzel',serif;font-size:13px;font-weight:700;letter-spacing:.08em;cursor:pointer;}
+#cfm-yes{background:var(--red);color:#fff;}#cfm-yes:active{opacity:.85;}
+#cfm-no{background:var(--v4);color:var(--t1);}#cfm-no:active{opacity:.85;}
+
+/* ── TOAST ─────────────────────────────────────────── */
+#toast{
+  position:fixed;
+  top:max(68px,calc(env(safe-area-inset-top,0px)+62px));
+  left:50%;transform:translateX(-50%) translateY(-10px);
+  background:var(--v4);border:1px solid var(--rim2);
+  border-radius:var(--r3);padding:11px 20px;
+  font-size:14px;color:var(--t0);z-index:960;
+  opacity:0;pointer-events:none;white-space:nowrap;
+  transition:.3s var(--ease);box-shadow:0 8px 32px rgba(0,0,0,.7);
+}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* Scrollbar global */
+*{scrollbar-width:thin;scrollbar-color:var(--rim2) transparent;}
+</style>
+</head>
+<body>
+
+<!-- Starfield -->
+<canvas id="stars"></canvas>
+
+<!-- Map -->
+<div id="map"></div>
+
+<!-- ── UPLOAD SCREEN ─────────────────────────── -->
+<div id="upload-screen">
+  <div class="logo">
+    <div class="logo-ring">🗺️</div>
+    <h1>ATLAS</h1>
+    <p>Dünya İnşa &amp; Lore Haritası</p>
+  </div>
+  <label id="upload-btn" for="map-file-input">
+    <span class="uico">🌍</span>
+    <span class="utit">İlk Haritanı Yükle</span>
+    <span class="usub">PNG · JPG · WEBP desteklenir</span>
+  </label>
+  <input type="file" id="map-file-input" accept="image/*">
+</div>
+
+<!-- ── TOP BAR ───────────────────────────────── -->
+<div id="top-bar">
+  <span class="brand">ATLAS</span>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="tb-srch">🔍</button>
+  <button class="tb-btn" id="tb-filt">⚡</button>
+  <button class="tb-btn" id="tb-menu">☰</button>
+</div>
+
+<!-- ── SEARCH PANEL ──────────────────────────── -->
+<div id="search-panel">
+  <div class="search-wrap">
+    <span class="s-ico">🔍</span>
+    <input type="text" id="search-input" placeholder="Başlık veya nota göre ara…" autocomplete="off">
+  </div>
+  <div id="search-res"></div>
+</div>
+
+<!-- ── FILTER PANEL ──────────────────────────── -->
+<div id="filter-panel">
+  <div class="fp-lbl">Kategori Filtresi — görünmesini istediklerini seç</div>
+  <div class="fp-row" id="fp-row"></div>
+</div>
+
+<!-- ── FAB ──────────────────────────────────── -->
+<button id="fab">📍</button>
+
+<!-- Add hint -->
+<div id="add-hint">✦ Haritada bir yere dokun</div>
+
+<!-- Pin count -->
+<div id="pin-count"><span class="pc-dot"></span><span id="pin-num">0 işaret</span></div>
+
+<!-- Backdrop -->
+<div id="backdrop"></div>
+
+<!-- ── RIGHT DRAWER ──────────────────────────── -->
+<div id="drawer">
+  <div class="dr-head">
+    <span class="dr-brand">ATLAS</span>
+    <button class="dr-x" id="dr-x">✕</button>
+  </div>
+  <div class="dr-body">
+    <div>
+      <div class="dr-sec-hd">
+        <span>🗺️ Haritalar</span>
+        <button id="btn-add-map">+ Yeni</button>
+      </div>
+      <div class="map-cards" id="map-cards"></div>
+    </div>
+    <div>
+      <div class="dr-sec-hd"><span>💾 Yedekleme</span></div>
+      <div class="bk-btns">
+        <button class="bk-btn" id="btn-export">
+          <span class="bki">📤</span>
+          <span class="bkt"><span>Dünyayı Yedekle</span><small>Tüm harita, pin ve notları .json indir</small></span>
+        </button>
+        <label class="bk-btn" for="import-file">
+          <span class="bki">📥</span>
+          <span class="bkt"><span>Yedek Yükle</span><small>Kaydedilmiş .json dosyasını geri yükle</small></span>
+        </label>
+        <input type="file" id="import-file" accept=".json" style="display:none">
+      </div>
+    </div>
+  </div>
+  <input type="file" id="new-map-file" accept="image/*" style="display:none">
+</div>
+
+<!-- ── BOTTOM SHEET (Pin Editor) ─────────────── -->
+<div id="sheet">
+  <div class="sh-handle"></div>
+  <div class="sh-head">
+    <span class="sh-lbl" id="sh-lbl">İşaret Detayı</span>
+    <button class="sh-x" id="sh-x">✕</button>
+  </div>
+  <div class="sh-body">
+    <div class="fg">
+      <label class="fl" for="p-title">Başlık</label>
+      <input type="text" id="p-title" class="fi" placeholder="Bu noktanın adı…" autocomplete="off">
+    </div>
+    <div class="fg">
+      <label class="fl">Kategori</label>
+      <div class="cat-scroll" id="cat-chips"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Özel Renk</label>
+      <div class="clr-row">
+        <label>Kategori rengi kullan veya özelleştir:</label>
+        <input type="color" id="pin-color" value="#d4a843">
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Notlar &amp; Lore</label>
+      <div class="md-wrap">
+        <div class="md-bar">
+          <button class="md-btn" data-md="bold" title="Kalın"><b>B</b></button>
+          <button class="md-btn" data-md="italic" title="İtalik"><i>I</i></button>
+          <button class="md-btn" data-md="h2" title="Başlık">H₂</button>
+          <button class="md-btn" data-md="h3" title="Küçük Başlık">H₃</button>
+          <button class="md-btn" data-md="list" title="Liste">≡</button>
+          <button class="md-btn" data-md="hr" title="Ayraç">—</button>
+          <div class="md-div"></div>
+          <button class="md-btn" id="md-prev-btn" title="Önizleme">👁</button>
+        </div>
+        <textarea id="p-notes" placeholder="**Kalın**, *italik*, ## Başlık, - Liste maddeleri…"></textarea>
+        <div id="md-prev"></div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Konum Görseli</label>
+      <div class="ipick">
+        <label class="ipick-btn" for="p-img">
+          <span class="ipick-ico">📸</span>
+          <span class="ipick-txt"><span>Galeriden Seç</span><small>Bu konuma özel görüntü</small></span>
+        </label>
+        <input type="file" id="p-img" accept="image/*">
+        <img id="pin-img-prev" alt="">
+      </div>
+    </div>
+  </div>
+  <div class="sh-acts">
+    <button class="btn btn-del" id="b-del">🗑️</button>
+    <button class="btn btn-save" id="b-save">Kaydet</button>
+  </div>
+</div>
+
+<!-- ── CONFIRM / PROMPT BOX ──────────────────── -->
+<div id="confirm-box">
+  <h3 id="confirm-ttl">Emin misin?</h3>
+  <p id="confirm-msg"></p>
+  <input type="text" id="confirm-inp" placeholder="">
+  <div class="cfm-btns">
+    <button id="cfm-no">Vazgeç</button>
+    <button id="cfm-yes">Tamam</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   ATLAS v2  —  Full World Builder Map
+   ═══════════════════════════════════════════════════════════════ */
+
+// ─── STARFIELD ────────────────────────────────────────────────
+;(function(){
+  const c=document.getElementById('stars'),ctx=c.getContext('2d');
+  let S=[];
+  function sz(){c.width=innerWidth;c.height=innerHeight;
+    S=[];const n=Math.floor(c.width*c.height/3800);
+    for(let i=0;i<n;i++)S.push({x:Math.random()*c.width,y:Math.random()*c.height,
+      r:Math.random()*1.1+.2,a:Math.random()*.55+.08,da:(Math.random()-.5)*.003});}
+  function draw(){ctx.clearRect(0,0,c.width,c.height);
+    S.forEach(s=>{s.a+=s.da;if(s.a<.04||s.a>.65)s.da*=-1;
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,195,255,${s.a})`;ctx.fill();});
+    requestAnimationFrame(draw);}
+  addEventListener('resize',sz);sz();draw();
+})();
+
+// ─── CATEGORIES ───────────────────────────────────────────────
+const CATS = {
+  city:      {label:'Şehir',       emoji:'🏙️', color:'#d4a843'},
+  kingdom:   {label:'Krallık',     emoji:'👑',  color:'#9b7fd4'},
+  dungeon:   {label:'Zindan',      emoji:'⚔️',  color:'#c05858'},
+  character: {label:'Karakter',    emoji:'🧙',  color:'#5b8dd9'},
+  danger:    {label:'Tehlikeli',   emoji:'🔥',  color:'#e0763a'},
+  sacred:    {label:'Kutsal',      emoji:'✨',  color:'#4ecbcb'},
+  other:     {label:'Diğer',       emoji:'📌',  color:'#7a8899'},
+};
+
+// ─── INDEXEDDB LAYER ──────────────────────────────────────────
+const IDB = (() => {
+  const DB_NAME='atlas_world',DB_VER=1;
+  let _db=null;
+
+  function open(){
+    if(_db)return Promise.resolve(_db);
+    return new Promise((ok,fail)=>{
+      const r=indexedDB.open(DB_NAME,DB_VER);
+      r.onerror=()=>fail(r.error);
+      r.onsuccess=()=>{_db=r.result;ok(_db);};
+      r.onupgradeneeded=e=>{
+        const db=e.target.result;
+        if(!db.objectStoreNames.contains('maps')){
+          const s=db.createObjectStore('maps',{keyPath:'id'});
+          s.createIndex('created','created');
+        }
+        if(!db.objectStoreNames.contains('pins')){
+          const s=db.createObjectStore('pins',{keyPath:'id'});
+          s.createIndex('mapId','mapId');
+        }
+        if(!db.objectStoreNames.contains('cfg')){
+          db.createObjectStore('cfg',{keyPath:'k'});
+        }
+      };
+    });
+  }
+
+  function rw(store,mode,fn){
+    return open().then(db=>new Promise((ok,fail)=>{
+      const t=db.transaction(store,mode);
+      t.onerror=()=>fail(t.error);
+      fn(t,ok,fail);
+    }));
+  }
+
+  const get=(s,k)=>rw(s,'readonly',(t,ok)=>{const r=t.objectStore(s).get(k);r.onsuccess=()=>ok(r.result);});
+  const getAll=(s)=>rw(s,'readonly',(t,ok)=>{const r=t.objectStore(s).getAll();r.onsuccess=()=>ok(r.result);});
+  const byIdx=(s,idx,val)=>rw(s,'readonly',(t,ok)=>{const r=t.objectStore(s).index(idx).getAll(val);r.onsuccess=()=>ok(r.result);});
+  const put=(s,d)=>rw(s,'readwrite',(t,ok,fail)=>{const r=t.objectStore(s).put(d);r.onsuccess=()=>ok(r.result);r.onerror=()=>fail(r.error);});
+  const del=(s,k)=>rw(s,'readwrite',(t,ok)=>{t.objectStore(s).delete(k);t.oncomplete=ok;});
+  const delByIdx=(s,idx,val)=>rw(s,'readwrite',(t,ok,fail)=>{
+    const cur=t.objectStore(s).index(idx).openCursor(IDBKeyRange.only(val));
+    cur.onsuccess=e=>{const c=e.target.result;if(c){c.delete();c.continue();}else ok();};
+    cur.onerror=()=>fail(cur.error);
+  });
+  const getCfg=async(k)=>{const r=await get('cfg',k);return r?r.v:null;};
+  const setCfg=(k,v)=>put('cfg',{k,v});
+
+  return {get,getAll,byIdx,put,del,delByIdx,getCfg,setCfg};
+})();
+
+// ─── UTILITIES ────────────────────────────────────────────────
+const uid=()=>'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+function blobURL(blob){return URL.createObjectURL(blob);}
+
+function blobToDataURL(blob){
+  return new Promise((ok,fail)=>{const r=new FileReader();r.onload=e=>ok(e.target.result);r.onerror=fail;r.readAsDataURL(blob);});
+}
+
+function dataURLToBlob(dataURL){
+  try{
+    const [hd,data]=dataURL.split(';base64,');
+    const type=hd.split(':')[1];
+    const bin=atob(data);
+    const arr=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+    return Promise.resolve(new Blob([arr],{type}));
+  }catch(e){return Promise.reject(e);}
+}
+
+async function imgDims(src){
+  return new Promise(ok=>{const i=new Image();i.onload=()=>ok({w:i.width,h:i.height});i.src=src;});
+}
+
+async function makeThumbnail(blob){
+  const url=blobURL(blob);
+  const img=new Image();
+  await new Promise(ok=>{img.onload=ok;img.src=url;});
+  URL.revokeObjectURL(url);
+  const W=200,H=140,c=document.createElement('canvas');
+  c.width=W;c.height=H;
+  const ctx=c.getContext('2d');
+  const sc=Math.max(W/img.width,H/img.height);
+  ctx.drawImage(img,(W-img.width*sc)/2,(H-img.height*sc)/2,img.width*sc,img.height*sc);
+  return new Promise(ok=>c.toBlob(ok,'image/jpeg',.68));
+}
+
+// ─── MARKDOWN PARSER ──────────────────────────────────────────
+function parseMD(text){
+  if(!text)return '';
+  const lines=text.split('\n');
+  const out=[];let inUl=false;
+  const inl=s=>s
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/__(.+?)__/g,'<strong>$1</strong>')
+    .replace(/_(.+?)_/g,'<em>$1</em>');
+  for(const ln of lines){
+    const h=ln.match(/^(#{1,3}) (.+)/);
+    if(h){if(inUl){out.push('</ul>');inUl=false;}
+      out.push(`<h${h[1].length}>${inl(h[2])}</h${h[1].length}>`);continue;}
+    if(/^[-*] /.test(ln)){
+      if(!inUl){out.push('<ul>');inUl=true;}
+      out.push(`<li>${inl(ln.slice(2))}</li>`);continue;}
+    if(inUl){out.push('</ul>');inUl=false;}
+    if(/^---+$/.test(ln.trim())){out.push('<hr>');continue;}
+    if(!ln.trim()){out.push('<br>');continue;}
+    out.push(`<p>${inl(ln)}</p>`);
+  }
+  if(inUl)out.push('</ul>');
+  return out.join('');
+}
+
+// ─── STATE ────────────────────────────────────────────────────
+let leafMap=null, mapBlobURL=null;
+let activeMapId=null;
+let pins={};          // id→pin data (in-memory for active map)
+let markers={};       // id→L.Marker
+let layerGroups={};   // cat→L.LayerGroup
+let activeFilters=new Set(Object.keys(CATS));
+
+let addMode=false, curPinId=null, isNewPin=false, tmpMkr=null;
+let pendingPinBlob=null;
+let selCat='other', mdPrevMode=false;
+
+// ─── DOM ──────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const UploadScreen=$('upload-screen'), MapFI=$('map-file-input');
+const TopBar=$('top-bar');
+const TbSrch=$('tb-srch'), TbFilt=$('tb-filt'), TbMenu=$('tb-menu');
+const SearchPanel=$('search-panel'), SearchInput=$('search-input'), SearchRes=$('search-res');
+const FilterPanel=$('filter-panel'), FpRow=$('fp-row');
+const Drawer=$('drawer'), DrX=$('dr-x');
+const MapCards=$('map-cards'), BtnAddMap=$('btn-add-map'), NewMapFI=$('new-map-file');
+const BtnExport=$('btn-export'), ImportFI=$('import-file');
+const Sheet=$('sheet'), ShX=$('sh-x'), ShLbl=$('sh-lbl');
+const PTitle=$('p-title'), PNotes=$('p-notes'), PColor=$('pin-color');
+const PImg=$('p-img'), PImgPrev=$('pin-img-prev');
+const BSave=$('b-save'), BDel=$('b-del');
+const MdPrevBtn=$('md-prev-btn'), MdPrev=$('md-prev');
+const CatChipsEl=$('cat-chips');
+const FAB=$('fab'), AddHint=$('add-hint'), PinCount=$('pin-count'), PinNum=$('pin-num');
+const Backdrop=$('backdrop');
+const ToastEl=$('toast');
+const CfmBox=$('confirm-box'), CfmTtl=$('confirm-ttl'), CfmMsg=$('confirm-msg');
+const CfmInp=$('confirm-inp'), CfmYes=$('cfm-yes'), CfmNo=$('cfm-no');
+
+// ─── TOAST ────────────────────────────────────────────────────
+let _toastT;
+function toast(m,d=2700){ToastEl.textContent=m;ToastEl.classList.add('on');
+  clearTimeout(_toastT);_toastT=setTimeout(()=>ToastEl.classList.remove('on'),d);}
+
+// ─── CONFIRM / PROMPT DIALOG ──────────────────────────────────
+let _cfmRes=null;
+function showConfirm(title,msg,yesLabel='Sil',noLabel='Vazgeç'){
+  return new Promise(res=>{
+    _cfmRes=res; CfmInp.style.display='none';
+    CfmTtl.textContent=title; CfmMsg.textContent=msg;
+    CfmYes.textContent=yesLabel; CfmNo.textContent=noLabel;
+    CfmBox.classList.add('on'); Backdrop.classList.add('on');
+  });
+}
+function showPrompt(title,placeholder,def=''){
+  return new Promise(res=>{
+    _cfmRes=(ok)=>res(ok?CfmInp.value.trim()||def:null);
+    CfmTtl.textContent=title; CfmMsg.textContent='';
+    CfmInp.style.display='block'; CfmInp.placeholder=placeholder; CfmInp.value=def;
+    CfmYes.textContent='Tamam'; CfmNo.textContent='Vazgeç';
+    CfmBox.classList.add('on'); Backdrop.classList.add('on');
+    setTimeout(()=>CfmInp.focus(),350);
+  });
+}
+function closeCfm(ok){
+  CfmBox.classList.remove('on'); Backdrop.classList.remove('on');
+  if(_cfmRes){_cfmRes(ok);_cfmRes=null;}
+}
+CfmYes.addEventListener('click',()=>closeCfm(true));
+CfmNo.addEventListener('click',()=>closeCfm(false));
+
+// ─── BACKDROP CLICK ───────────────────────────────────────────
+Backdrop.addEventListener('click',()=>{
+  if(CfmBox.classList.contains('on')){closeCfm(false);return;}
+  closeSheet(); closeDrawer(); closeSearch(); closeFilter();
+});
+
+// ─── FILTER CHIPS INIT ────────────────────────────────────────
+function buildFilterChips(){
+  FpRow.innerHTML='';
+  Object.entries(CATS).forEach(([k,cat])=>{
+    const el=document.createElement('div');
+    el.className='fchip on'; el.dataset.cat=k;
+    el.style.cssText=`border-color:${cat.color};background:${cat.color}22;color:${cat.color};`;
+    el.textContent=cat.emoji+' '+cat.label;
+    el.addEventListener('click',()=>toggleFilter(k,el));
+    FpRow.appendChild(el);
+  });
+}
+
+function toggleFilter(k,el){
+  if(activeFilters.has(k)){
+    if(activeFilters.size<=1){toast('⚠️ En az bir kategori görünür olmalı');return;}
+    activeFilters.delete(k);
+    el.classList.remove('on');
+    el.style.background='transparent';el.style.color=CATS[k].color+'80';
+    if(leafMap&&layerGroups[k])leafMap.removeLayer(layerGroups[k]);
+  }else{
+    activeFilters.add(k);
+    el.classList.add('on');
+    el.style.background=CATS[k].color+'22';el.style.color=CATS[k].color;
+    if(leafMap&&layerGroups[k])layerGroups[k].addTo(leafMap);
+  }
+}
+
+// ─── CATEGORY CHIPS IN SHEET ──────────────────────────────────
+function buildCatChips(){
+  CatChipsEl.innerHTML='';
+  Object.entries(CATS).forEach(([k,cat])=>{
+    const el=document.createElement('div');
+    el.className='cchip';el.dataset.cat=k;
+    el.textContent=cat.emoji+' '+cat.label;
+    el.addEventListener('click',()=>selectCat(k));
+    CatChipsEl.appendChild(el);
+  });
+}
+
+function selectCat(k){
+  selCat=k;
+  PColor.value=CATS[k].color;
+  document.querySelectorAll('.cchip').forEach(c=>{
+    const ck=c.dataset.cat;
+    if(ck===k){c.classList.add('on');c.style.background=CATS[ck].color;
+      c.style.borderColor=CATS[ck].color;c.style.color='#000';}
+    else{c.classList.remove('on');c.style.background='';c.style.borderColor='';c.style.color='';}
+  });
+}
+
+// ─── MARKER ICON ──────────────────────────────────────────────
+function mkrIcon(cat,color,sel){
+  const c=color||CATS[cat]?.color||'#7a8899';
+  const e=CATS[cat]?.emoji||'📌';
+  return L.divIcon({
+    className:'',
+    html:`<div class="mkr${sel?' sel':''}">
+      <div class="mkr-pin" style="background:${c};box-shadow:0 4px 16px ${c}90">
+        <span>${e}</span>
+      </div>
+      <div class="mkr-tail" style="background:${c}"></div>
+    </div>`,
+    iconAnchor:[13,36],iconSize:[26,36],
+  });
+}
+
+// ─── MAP ENGINE ───────────────────────────────────────────────
+async function initLeaflet(blob){
+  if(leafMap){leafMap.remove();leafMap=null;}
+  if(mapBlobURL){URL.revokeObjectURL(mapBlobURL);mapBlobURL=null;}
+  Object.values(markers).forEach(m=>m.remove());
+  markers={}; pins={};
+  layerGroups={};
+  Object.keys(CATS).forEach(k=>{layerGroups[k]=L.layerGroup();});
+
+  mapBlobURL=blobURL(blob);
+  const{w,h}=await imgDims(mapBlobURL);
+
+  leafMap=L.map('map',{
+    crs:L.CRS.Simple,minZoom:-4,maxZoom:7,
+    zoomControl:false,attributionControl:false,
+    tap:true,tapTolerance:22,touchZoom:true,dragging:true,
+    inertia:true,inertiaDeceleration:2500,maxBoundsViscosity:.82,
+  });
+
+  L.imageOverlay(mapBlobURL,[[0,0],[h,w]]).addTo(leafMap);
+  leafMap.fitBounds([[0,0],[h,w]]);
+  leafMap.setMaxBounds([[-h*.4,-w*.4],[h*1.4,w*1.4]]);
+
+  Object.entries(layerGroups).forEach(([k,lg])=>{
+    if(activeFilters.has(k))lg.addTo(leafMap);
+  });
+
+  leafMap.on('click',e=>{
+    if(!addMode)return;
+    setAddMode(false);
+    openNewPin(e.latlng.lat,e.latlng.lng);
+  });
+}
+
+async function loadPins(mapId){
+  const list=await IDB.byIdx('pins','mapId',mapId);
+  Object.values(layerGroups).forEach(lg=>lg.clearLayers());
+  markers={}; pins={};
+  list.forEach(p=>{pins[p.id]=p; dropMarker(p,false);});
+  updateCount();
+}
+
+function dropMarker(p,flash){
+  const mkr=L.marker([p.lat,p.lng],{icon:mkrIcon(p.category,p.color,false)});
+  mkr.on('click',()=>openExistPin(p.id));
+  const lg=layerGroups[p.category||'other'];
+  if(lg)lg.addLayer(mkr);else mkr.addTo(leafMap);
+  markers[p.id]=mkr;
+  if(flash){
+    mkr.setIcon(mkrIcon(p.category,p.color,true));
+    setTimeout(()=>mkr.setIcon(mkrIcon(p.category,p.color,false)),500);
+  }
+}
+
+// ─── ADD MODE ─────────────────────────────────────────────────
+function setAddMode(on){
+  addMode=on;
+  if(on){FAB.classList.add('active');FAB.textContent='✕';AddHint.classList.add('on');}
+  else{FAB.classList.remove('active');FAB.textContent='📍';AddHint.classList.remove('on');}
+}
+FAB.addEventListener('click',()=>{if(!leafMap){toast('⚠️ Önce harita yükle');return;}setAddMode(!addMode);});
+
+// ─── SHEET OPEN / CLOSE ───────────────────────────────────────
+const ShBody=Sheet.querySelector('.sh-body');
+
+function openSheet(){Sheet.classList.add('on');Backdrop.classList.add('on');}
+function closeSheet(){
+  Sheet.classList.remove('on');Backdrop.classList.remove('on');
+  if(curPinId&&markers[curPinId]&&pins[curPinId])
+    markers[curPinId].setIcon(mkrIcon(pins[curPinId].category,pins[curPinId].color,false));
+  if(isNewPin&&tmpMkr){leafMap.removeLayer(tmpMkr);tmpMkr=null;delete pins[curPinId];}
+  curPinId=null;isNewPin=false;pendingPinBlob=null;mdPrevMode=false;
+  PImgPrev.classList.remove('on');PImgPrev.src='';PImg.value='';
+  MdPrev.classList.remove('on');PNotes.style.display='';MdPrevBtn.classList.remove('on');
+}
+ShX.addEventListener('click',closeSheet);
+
+// Swipe down to close
+let _swipeY=0;
+Sheet.addEventListener('touchstart',e=>{_swipeY=e.touches[0].clientY;},{passive:true});
+Sheet.addEventListener('touchmove',e=>{
+  if(e.touches[0].clientY-_swipeY>72&&ShBody.scrollTop===0)closeSheet();
+},{passive:true});
+
+function openNewPin(lat,lng){
+  isNewPin=true;curPinId=uid();
+  PTitle.value='';PNotes.value='';pendingPinBlob=null;
+  PImgPrev.classList.remove('on');PImgPrev.src='';
+  mdPrevMode=false;MdPrev.classList.remove('on');PNotes.style.display='';MdPrevBtn.classList.remove('on');
+  selCat='other';selectCat('other');PColor.value=CATS.other.color;
+  ShLbl.textContent='Yeni İşaret';
+  tmpMkr=L.marker([lat,lng],{icon:mkrIcon('other',CATS.other.color,true)}).addTo(leafMap);
+  pins[curPinId]={id:curPinId,mapId:activeMapId,lat,lng,title:'',notes:'',category:'other',color:CATS.other.color};
+  openSheet();
+  setTimeout(()=>PTitle.focus(),480);
+}
+
+function openExistPin(id){
+  if(isNewPin)return;
+  isNewPin=false;curPinId=id;
+  const p=pins[id];
+  PTitle.value=p.title||'';PNotes.value=p.notes||'';
+  selCat=p.category||'other';selectCat(selCat);
+  PColor.value=p.color||CATS[selCat].color;
+  pendingPinBlob=null;
+  ShLbl.textContent='İşaret Detayı';
+  mdPrevMode=false;MdPrev.classList.remove('on');PNotes.style.display='';MdPrevBtn.classList.remove('on');
+  if(p.imageBlob){const u=blobURL(p.imageBlob);PImgPrev.src=u;PImgPrev.classList.add('on');}
+  else{PImgPrev.classList.remove('on');PImgPrev.src='';}
+  markers[id]?.setIcon(mkrIcon(p.category,p.color,true));
+  openSheet();
+}
+
+// ─── MARKDOWN TOOLBAR ─────────────────────────────────────────
+document.querySelectorAll('.md-btn[data-md]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    if(mdPrevMode)return;
+    const a=btn.dataset.md, ta=PNotes;
+    const s=ta.selectionStart, e2=ta.selectionEnd, sel=ta.value.substring(s,e2);
+    let ins='',cur=0;
+    if(a==='bold'){ins=`**${sel||'kalın'}**`;cur=sel?e2+4:s+2;}
+    else if(a==='italic'){ins=`*${sel||'italik'}*`;cur=sel?e2+2:s+1;}
+    else if(a==='h2'){ins=`\n## ${sel||'Başlık'}\n`;cur=s+4;}
+    else if(a==='h3'){ins=`\n### ${sel||'Küçük Başlık'}\n`;cur=s+5;}
+    else if(a==='list'){ins=`\n- ${sel||'madde'}`;cur=s+3;}
+    else if(a==='hr'){ins='\n---\n';cur=s+5;}
+    ta.value=ta.value.substring(0,s)+ins+ta.value.substring(e2);
+    ta.selectionStart=ta.selectionEnd=cur;ta.focus();
+  });
+});
+
+MdPrevBtn.addEventListener('click',()=>{
+  mdPrevMode=!mdPrevMode;
+  if(mdPrevMode){
+    MdPrev.innerHTML=parseMD(PNotes.value)||'<em style="color:var(--t2)">Henüz not yok…</em>';
+    MdPrev.classList.add('on');PNotes.style.display='none';MdPrevBtn.classList.add('on');
+  }else{
+    MdPrev.classList.remove('on');PNotes.style.display='';MdPrevBtn.classList.remove('on');PNotes.focus();
+  }
+});
+
+// ─── COLOR / IMAGE ────────────────────────────────────────────
+PColor.addEventListener('input',e=>{
+  if(curPinId&&pins[curPinId]){
+    pins[curPinId].color=e.target.value;
+    if(tmpMkr)tmpMkr.setIcon(mkrIcon(selCat,e.target.value,true));
+  }
+});
+
+PImg.addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  pendingPinBlob=f;
+  PImgPrev.src=blobURL(f);PImgPrev.classList.add('on');
+});
+
+// ─── SAVE PIN ─────────────────────────────────────────────────
+BSave.addEventListener('click',async()=>{
+  const title=PTitle.value.trim(), notes=PNotes.value.trim(), id=curPinId;
+  if(!id)return;
+  const cat=selCat, color=PColor.value;
+  const p=pins[id];
+  const imgBlob=pendingPinBlob||(p.imageBlob||null);
+
+  if(isNewPin){
+    if(tmpMkr){leafMap.removeLayer(tmpMkr);tmpMkr=null;}
+    const np={id,mapId:activeMapId,lat:p.lat,lng:p.lng,title,notes,category:cat,color,imageBlob:imgBlob,created:Date.now()};
+    pins[id]=np;
+    await IDB.put('pins',np);
+    dropMarker(np,false);
+    isNewPin=false;
+  }else{
+    const oldCat=pins[id].category;
+    const np={...pins[id],title,notes,category:cat,color,imageBlob:imgBlob};
+    pins[id]=np;
+    await IDB.put('pins',np);
+    // Move marker to correct layer group
+    if(markers[id]){
+      Object.values(layerGroups).forEach(lg=>lg.removeLayer(markers[id]));
+      const nm=L.marker([np.lat,np.lng],{icon:mkrIcon(cat,color,false)});
+      nm.on('click',()=>openExistPin(id));
+      const lg=layerGroups[cat];if(lg)lg.addLayer(nm);else nm.addTo(leafMap);
+      markers[id]=nm;
+    }
+  }
+
+  updateCount();toast('✦ Kaydedildi');
+  curPinId=null;pendingPinBlob=null;
+  Sheet.classList.remove('on');Backdrop.classList.remove('on');
+  PImgPrev.classList.remove('on');PImgPrev.src='';
+});
+
+// ─── DELETE PIN ───────────────────────────────────────────────
+BDel.addEventListener('click',async()=>{
+  if(!curPinId)return;
+  const ok=await showConfirm('İşareti Sil','Bu pin ve notları kalıcı silinecek. Devam?','Evet Sil','Vazgeç');
+  if(!ok)return;
+  const id=curPinId;
+  if(markers[id]){Object.values(layerGroups).forEach(lg=>lg.removeLayer(markers[id]));delete markers[id];}
+  delete pins[id];
+  await IDB.del('pins',id);
+  updateCount();toast('🗑️ Silindi');
+  curPinId=null;isNewPin=false;tmpMkr=null;
+  Sheet.classList.remove('on');Backdrop.classList.remove('on');
+});
+
+function updateCount(){
+  const n=Object.keys(pins).length;
+  PinNum.textContent=n===0?'0 işaret':`${n} işaret`;
+}
+
+// ─── MAP UPLOAD ───────────────────────────────────────────────
+async function handleNewMap(file,name){
+  if(!file)return;
+  toast('⏳ Yükleniyor…',6000);
+  try{
+    const blob=file;
+    const thumb=await makeThumbnail(blob);
+    const id=uid();
+    const now=Date.now();
+    const mapRec={id,name:name||'Harita',image:blob,thumbnail:thumb,created:now,modified:now};
+    await IDB.put('maps',mapRec);
+    await switchMap(id);
+    await renderMapList();
+    toast('✦ Harita hazır!');
+  }catch(e){console.error(e);toast('❌ Hata: '+e.message);}
+}
+
+MapFI.addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;MapFI.value='';
+  UploadScreen.style.display='none';
+  TopBar.style.display='flex';FAB.style.display='flex';PinCount.style.display='flex';
+  const name=await showPrompt('Harita Adı','Örn: Ana Dünya, Şehir Haritası…','Yeni Harita');
+  if(name===null){
+    // cancelled — but still proceed with default
+  }
+  await handleNewMap(f,name||'Harita 1');
+});
+
+NewMapFI.addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;NewMapFI.value='';
+  const name=await showPrompt('Harita Adı','Bu harita için bir ad gir…','Yeni Harita');
+  await handleNewMap(f,name||'Yeni Harita');
+});
+
+BtnAddMap.addEventListener('click',()=>NewMapFI.click());
+
+// ─── SWITCH MAP ───────────────────────────────────────────────
+async function switchMap(id){
+  if(id===activeMapId)return;
+  closeSheet();
+  activeMapId=id;
+  await IDB.setCfg('activeMapId',id);
+  const rec=await IDB.get('maps',id);
+  if(!rec){toast('❌ Harita bulunamadı');return;}
+  await initLeaflet(rec.image);
+  await loadPins(id);
+  // Restore filter states visually
+  document.querySelectorAll('.fchip').forEach(chip=>{
+    const k=chip.dataset.cat;
+    const on=activeFilters.has(k);
+    chip.classList.toggle('on',on);
+    chip.style.background=on?CATS[k].color+'22':'transparent';
+    chip.style.color=on?CATS[k].color:CATS[k].color+'80';
+  });
+}
+
+// ─── RENDER MAP LIST ──────────────────────────────────────────
+async function renderMapList(){
+  MapCards.innerHTML='';
+  const all=await IDB.getAll('maps');
+  all.sort((a,b)=>a.created-b.created);
+  for(const m of all){
+    const pinCount=(await IDB.byIdx('pins','mapId',m.id)).length;
+    const card=document.createElement('div');
+    card.className='mcard'+(m.id===activeMapId?' cur':'');
+
+    let thumbHTML='<div class="mcard-ph">🗺️</div>';
+    if(m.thumbnail){
+      const tu=blobURL(m.thumbnail);
+      thumbHTML=`<img class="mcard-thumb" src="${tu}" alt="">`;
+    }
+
+    card.innerHTML=`
+      ${thumbHTML}
+      ${m.id===activeMapId?'<span class="cur-dot"></span>':''}
+      <div class="mcard-info">
+        <div class="mcard-name">${m.name}</div>
+        <div class="mcard-meta">${pinCount} işaret</div>
+      </div>
+      <button class="mcard-del" data-id="${m.id}">🗑️</button>
+    `;
+
+    card.addEventListener('click',async e=>{
+      if(e.target.classList.contains('mcard-del'))return;
+      await switchMap(m.id);closeDrawer();
+    });
+
+    card.querySelector('.mcard-del').addEventListener('click',async e=>{
+      e.stopPropagation();
+      if(all.length<=1){toast('⚠️ Son haritayı silemezsin');return;}
+      const ok=await showConfirm(`"${m.name}" Silinsin mi?`,`Bu harita ve tüm ${pinCount} pini kalıcı silinecek.`,'Evet Sil','Vazgeç');
+      if(!ok)return;
+      await IDB.delByIdx('pins','mapId',m.id);
+      await IDB.del('maps',m.id);
+      if(activeMapId===m.id){
+        const rem=await IDB.getAll('maps');
+        if(rem.length>0)await switchMap(rem[0].id);
+      }
+      await renderMapList();
+      toast('🗑️ Harita silindi');
+    });
+
+    MapCards.appendChild(card);
+  }
+}
+
+// ─── SEARCH ───────────────────────────────────────────────────
+let _srchOpen=false;
+function toggleSearch(){
+  _srchOpen=!_srchOpen;
+  if(_srchOpen){SearchPanel.classList.add('on');TbSrch.classList.add('lit');SearchInput.focus();closeFilter();}
+  else{closeSearch();}
+}
+function closeSearch(){
+  _srchOpen=false;SearchPanel.classList.remove('on');TbSrch.classList.remove('lit');
+  SearchRes.innerHTML='';SearchInput.value='';
+}
+TbSrch.addEventListener('click',toggleSearch);
+
+SearchInput.addEventListener('input',()=>{
+  const q=SearchInput.value.trim().toLowerCase();
+  if(!q){SearchRes.innerHTML='';return;}
+  const hits=Object.values(pins).filter(p=>
+    (p.title||'').toLowerCase().includes(q)||(p.notes||'').toLowerCase().includes(q));
+  if(!hits.length){SearchRes.innerHTML='<div class="sr-none">🔍 Sonuç bulunamadı</div>';return;}
+  SearchRes.innerHTML='';
+  hits.slice(0,8).forEach(p=>{
+    const cat=CATS[p.category]||CATS.other;
+    const snip=(p.notes||'').replace(/[*#_\-]+/g,' ').trim().slice(0,55);
+    const row=document.createElement('div');row.className='sr-row';
+    row.innerHTML=`<span class="sr-em">${cat.emoji}</span>
+      <div class="sr-txt">
+        <div class="sr-tit">${p.title||'İsimsiz'}</div>
+        ${snip?`<div class="sr-snip">${snip}…</div>`:''}
+      </div>`;
+    row.addEventListener('click',()=>{
+      closeSearch();
+      leafMap?.panTo([p.lat,p.lng],{animate:true,duration:.65});
+      setTimeout(()=>openExistPin(p.id),720);
+    });
+    SearchRes.appendChild(row);
+  });
+});
+
+// ─── FILTER ───────────────────────────────────────────────────
+let _filtOpen=false;
+function toggleFilter(){
+  _filtOpen=!_filtOpen;
+  if(_filtOpen){FilterPanel.classList.add('on');TbFilt.classList.add('lit');closeSearch();}
+  else{closeFilter();}
+}
+function closeFilter(){_filtOpen=false;FilterPanel.classList.remove('on');TbFilt.classList.remove('lit');}
+TbFilt.addEventListener('click',toggleFilter);
+
+// ─── DRAWER ───────────────────────────────────────────────────
+function openDrawer(){Drawer.classList.add('on');Backdrop.classList.add('on');renderMapList();}
+function closeDrawer(){Drawer.classList.remove('on');Backdrop.classList.remove('on');}
+TbMenu.addEventListener('click',openDrawer);
+DrX.addEventListener('click',closeDrawer);
+
+// ─── EXPORT ───────────────────────────────────────────────────
+BtnExport.addEventListener('click',async()=>{
+  toast('📦 Yedek hazırlanıyor…',9000);
+  try{
+    const allMaps=await IDB.getAll('maps');
+    const out={version:2,exported:new Date().toISOString(),activeMapId,maps:[]};
+    for(const m of allMaps){
+      const entry={
+        id:m.id,name:m.name,created:m.created,modified:m.modified,
+        imageB64:await blobToDataURL(m.image),
+        thumbB64:m.thumbnail?await blobToDataURL(m.thumbnail):null,
+        pins:[],
+      };
+      const mPins=await IDB.byIdx('pins','mapId',m.id);
+      for(const p of mPins){
+        entry.pins.push({
+          id:p.id,mapId:p.mapId,lat:p.lat,lng:p.lng,
+          title:p.title,notes:p.notes,category:p.category,color:p.color,
+          created:p.created,
+          imageB64:p.imageBlob?await blobToDataURL(p.imageBlob):null,
+        });
+      }
+      out.maps.push(entry);
+    }
+    const blob=new Blob([JSON.stringify(out)],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=blobURL(blob);
+    a.download=`atlas_yedek_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    toast('✦ Yedek indirildi!');
+  }catch(e){console.error(e);toast('❌ Yedekleme hatası');}
+});
+
+// ─── IMPORT ───────────────────────────────────────────────────
+ImportFI.addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;ImportFI.value='';
+  const ok=await showConfirm('Yedek Yükle','Mevcut tüm veriler silinecek ve yedek geri yüklenecek. Devam?','Evet Yükle','Vazgeç');
+  if(!ok)return;
+  toast('📥 Yükleniyor…',12000);
+  try{
+    const txt=await f.text();
+    const data=JSON.parse(txt);
+    if(!Array.isArray(data.maps))throw new Error('Geçersiz yedek');
+    const exist=await IDB.getAll('maps');
+    for(const m of exist){await IDB.delByIdx('pins','mapId',m.id);await IDB.del('maps',m.id);}
+    for(const m of data.maps){
+      const imgBlob=await dataURLToBlob(m.imageB64);
+      const thumbBlob=m.thumbB64?await dataURLToBlob(m.thumbB64):null;
+      await IDB.put('maps',{id:m.id,name:m.name,image:imgBlob,thumbnail:thumbBlob,
+        created:m.created||Date.now(),modified:m.modified||Date.now()});
+      for(const p of(m.pins||[])){
+        const pImg=p.imageB64?await dataURLToBlob(p.imageB64):null;
+        await IDB.put('pins',{id:p.id,mapId:p.mapId,lat:p.lat,lng:p.lng,
+          title:p.title||'',notes:p.notes||'',
+          category:p.category||'other',color:p.color||CATS.other.color,
+          imageBlob:pImg,created:p.created||Date.now()});
+      }
+    }
+    activeMapId=null; // force reload
+    const firstId=data.activeMapId||data.maps[0].id;
+    UploadScreen.style.display='none';
+    TopBar.style.display='flex';FAB.style.display='flex';PinCount.style.display='flex';
+    await switchMap(firstId);
+    closeDrawer();
+    toast('🎉 Dünya geri yüklendi!');
+  }catch(e){console.error(e);toast('❌ Yükleme hatası: '+e.message);}
+});
+
+// ─── INIT ─────────────────────────────────────────────────────
+buildFilterChips();
+buildCatChips();
+
+(async()=>{
+  try{
+    const savedId=await IDB.getCfg('activeMapId');
+    const allMaps=await IDB.getAll('maps');
+    if(!allMaps.length||!savedId){UploadScreen.style.display='flex';return;}
+    const targetId=allMaps.find(m=>m.id===savedId)?savedId:allMaps[0].id;
+    UploadScreen.style.display='none';
+    TopBar.style.display='flex';FAB.style.display='flex';PinCount.style.display='flex';
+    await switchMap(targetId);
+  }catch(e){console.error(e);UploadScreen.style.display='flex';}
+})();
+
+// ─── PWA SERVICE WORKER ───────────────────────────────────────
+if('serviceWorker' in navigator){
+  addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>

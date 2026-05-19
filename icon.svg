@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background pill -->
+  <rect width="512" height="512" rx="110" fill="#09090f"/>
+
+  <!-- Subtle grid -->
+  <line x1="256" y1="60"  x2="256" y2="452" stroke="#d4a843" stroke-width="1" opacity="0.12"/>
+  <line x1="60"  y1="256" x2="452" y2="256" stroke="#d4a843" stroke-width="1" opacity="0.12"/>
+  <line x1="110" y1="110" x2="402" y2="402" stroke="#d4a843" stroke-width="1" opacity="0.07"/>
+  <line x1="402" y1="110" x2="110" y2="402" stroke="#d4a843" stroke-width="1" opacity="0.07"/>
+
+  <!-- Outer orbit ring -->
+  <circle cx="256" cy="256" r="195" fill="none" stroke="#d4a843" stroke-width="2.5"
+          stroke-dasharray="14 7" opacity="0.3"/>
+
+  <!-- Middle ring -->
+  <circle cx="256" cy="256" r="138" fill="none" stroke="#9b7fd4" stroke-width="1.5" opacity="0.18"/>
+
+  <!-- Compass points N -->
+  <polygon points="256,84 245,136 256,126 267,136" fill="#d4a843" opacity="0.9"/>
+  <!-- S -->
+  <polygon points="256,428 245,376 256,386 267,376" fill="#d4a843" opacity="0.38"/>
+  <!-- E -->
+  <polygon points="428,256 376,245 386,256 376,267" fill="#d4a843" opacity="0.38"/>
+  <!-- W -->
+  <polygon points="84,256 136,245 126,256 136,267" fill="#d4a843" opacity="0.38"/>
+
+  <!-- Map pin body -->
+  <path d="M256,152 C219,152 190,181 190,218 C190,266 256,344 256,344 C256,344 322,266 322,218 C322,181 293,152 256,152Z"
+        fill="#d4a843" opacity="0.95"/>
+
+  <!-- Pin inner hole -->
+  <circle cx="256" cy="215" r="26" fill="#09090f"/>
+
+  <!-- Inner accent dot -->
+  <circle cx="256" cy="215" r="8" fill="#d4a843" opacity="0.5"/>
+
+  <!-- Scatter stars -->
+  <circle cx="148" cy="140" r="3"   fill="#d4a843" opacity="0.55"/>
+  <circle cx="374" cy="125" r="2.2" fill="#9b7fd4" opacity="0.5"/>
+  <circle cx="392" cy="380" r="2.8" fill="#d4a843" opacity="0.45"/>
+  <circle cx="125" cy="370" r="2"   fill="#4ecbcb" opacity="0.4"/>
+  <circle cx="168" cy="395" r="1.6" fill="#d4a843" opacity="0.35"/>
+  <circle cx="348" cy="405" r="2.2" fill="#9b7fd4" opacity="0.4"/>
+  <circle cx="96"  cy="240" r="1.8" fill="#d4a843" opacity="0.28"/>
+  <circle cx="418" cy="195" r="1.5" fill="#4ecbcb" opacity="0.35"/>
+  <circle cx="200" cy="96"  r="1.8" fill="#9b7fd4" opacity="0.3"/>
+  <circle cx="320" cy="88"  r="1.4" fill="#d4a843" opacity="0.28"/>
+</svg>

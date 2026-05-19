@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8">
+<title>ATLAS — İkon Üretici</title>
+<style>
+  body{background:#09090f;color:#f0edff;font-family:'Segoe UI',sans-serif;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100vh;gap:20px;padding:40px;}
+  h2{color:#d4a843;letter-spacing:.2em;font-size:22px;}
+  p{color:rgba(240,237,255,.5);font-size:14px;text-align:center;}
+  .links{display:flex;flex-direction:column;gap:10px;align-items:center;}
+  a{display:inline-block;background:#d4a843;color:#000;padding:12px 28px;
+    border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;}
+  a:hover{opacity:.88;}
+  canvas{border-radius:16px;border:1px solid rgba(212,168,67,.3);}
+  #status{color:#4ecbcb;font-size:14px;min-height:20px;}
+</style>
+</head>
+<body>
+<h2>🗺️ ATLAS İkon Üretici</h2>
+<p>Bu sayfa, uygulama ikonlarını otomatik üretir ve indirir.<br>
+   İndirilen iki PNG dosyasını <strong>atlas-v2</strong> klasörüne koyun.</p>
+<canvas id="c"></canvas>
+<div id="status">Üretiliyor…</div>
+<div class="links" id="links"></div>
+
+<script>
+const SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="110" fill="#09090f"/>
+  <line x1="256" y1="60" x2="256" y2="452" stroke="#d4a843" stroke-width="1" opacity="0.12"/>
+  <line x1="60" y1="256" x2="452" y2="256" stroke="#d4a843" stroke-width="1" opacity="0.12"/>
+  <circle cx="256" cy="256" r="195" fill="none" stroke="#d4a843" stroke-width="2.5" stroke-dasharray="14 7" opacity="0.3"/>
+  <circle cx="256" cy="256" r="138" fill="none" stroke="#9b7fd4" stroke-width="1.5" opacity="0.18"/>
+  <polygon points="256,84 245,136 256,126 267,136" fill="#d4a843" opacity="0.9"/>
+  <polygon points="256,428 245,376 256,386 267,376" fill="#d4a843" opacity="0.38"/>
+  <polygon points="428,256 376,245 386,256 376,267" fill="#d4a843" opacity="0.38"/>
+  <polygon points="84,256 136,245 126,256 136,267" fill="#d4a843" opacity="0.38"/>
+  <path d="M256,152 C219,152 190,181 190,218 C190,266 256,344 256,344 C256,344 322,266 322,218 C322,181 293,152 256,152Z" fill="#d4a843" opacity="0.95"/>
+  <circle cx="256" cy="215" r="26" fill="#09090f"/>
+  <circle cx="256" cy="215" r="8" fill="#d4a843" opacity="0.5"/>
+  <circle cx="148" cy="140" r="3" fill="#d4a843" opacity="0.55"/>
+  <circle cx="374" cy="125" r="2.2" fill="#9b7fd4" opacity="0.5"/>
+  <circle cx="392" cy="380" r="2.8" fill="#d4a843" opacity="0.45"/>
+  <circle cx="125" cy="370" r="2" fill="#4ecbcb" opacity="0.4"/>
+</svg>`;
+
+async function generate() {
+  const blob = new Blob([SVG], { type: 'image/svg+xml' });
+  const url  = URL.createObjectURL(blob);
+  const img  = new Image();
+  await new Promise(r => { img.onload = r; img.src = url; });
+  URL.revokeObjectURL(url);
+
+  const links = document.getElementById('links');
+  const status = document.getElementById('status');
+  const canvas = document.getElementById('c');
+
+  for (const size of [192, 512]) {
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, size, size);
+    ctx.drawImage(img, 0, 0, size, size);
+
+    const dataURL = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = dataURL;
+    a.download = `icon-${size}.png`;
+    a.textContent = `⬇ icon-${size}.png İndir`;
+    links.appendChild(a);
+    a.click();
+    await new Promise(r => setTimeout(r, 800));
+  }
+
+  status.textContent = '✅ İki dosya da indirildi. atlas-v2 klasörüne koyun ve bu sekmeyi kapatın.';
+}
+
+generate().catch(e => {
+  document.getElementById('status').textContent = '❌ Hata: ' + e.message;
+});
+</script>
+</body>
+</html>
